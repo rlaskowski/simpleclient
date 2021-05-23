@@ -112,7 +112,3 @@ func (c *Client) download(filepath, url string) error {
 	return nil
 }
 
-func (c *Client) auth() string {
-	auth := fmt.Sprintf("%s:%s", "t.pocek", "01041981")
-	return base64.StdEncoding.EncodeToString([]byte(auth))
-}
