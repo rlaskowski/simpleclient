@@ -1,13 +1,33 @@
 package client
 
-import "net/http"
+import (
+	"io"
+	"net/http"
+)
 
 type Response struct {
-	response *http.Response
+	response   *http.Response
+	SendedByte int64
 }
 
 func NewResponse(res *http.Response) *Response {
 	return &Response{
 		response: res,
 	}
+}
+
+func (r *Response) Status() string {
+	return r.response.Status
+}
+
+func (r *Response) StatusCode() int {
+	return r.response.StatusCode
+}
+
+func (r *Response) Body() io.ReadCloser {
+	return r.response.Body
+}
+
+func (r *Response) ContentLength() int64 {
+	return r.response.ContentLength
 }
