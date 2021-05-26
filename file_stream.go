@@ -56,7 +56,7 @@ func (f *FileStream) Download(fn StreamFunc) error {
 	return nil
 }
 
-func (f *FileStream) AddHeader(key, value string) {
+func (f *FileStream) SetHeader(key, value string) {
 	f.request.Header.Set(key, value)
 }
 
