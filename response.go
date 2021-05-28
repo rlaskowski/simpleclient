@@ -3,6 +3,7 @@ package client
 import (
 	"io"
 	"net/http"
+	"net/url"
 )
 
 type Response struct {
@@ -30,4 +31,8 @@ func (r *Response) Body() io.ReadCloser {
 
 func (r *Response) ContentLength() int64 {
 	return r.response.ContentLength
+}
+
+func (r *Response) URL() *url.URL {
+	return r.response.Request.URL
 }

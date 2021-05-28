@@ -1,75 +1,104 @@
 package client
 
 import (
+	"errors"
 	"fmt"
 	"io"
 	"net/http"
+	"net/url"
 	"os"
+	"path/filepath"
+	"strings"
 )
 
 type StreamFunc func(fileinfo FileInfo) error
 
 type FileInfo struct {
-	Name      string
-	TotalSize int64
-	Size      int64
-	Complete  bool
+	Name         string
+	TotalSize    int64
+	WrittenBytes int64
+	Complete     bool
 }
 
 type FileStream struct {
-	Filename string
-	request  *http.Request
-	client   *Client
+	path    string
+	headers http.Header
+	client  *Client
 }
 
-func NewFileStream(filename, url string) *FileStream {
-	f := &FileStream{
-		Filename: filename,
-		client:   NewClient(),
+func NewFileStream(path string) *FileStream {
+	return &FileStream{
+		path:    path,
+		headers: make(http.Header),
+		client:  NewClient(),
 	}
+}
 
+func (f *FileStream) Download(url string, fn StreamFunc) (*Response, error) {
 	req, err := f.client.GetRequest(url)
 	if err != nil {
-		return nil
+		return nil, err
 	}
 
-	f.request = req
+	req.Header = f.headers
 
-	return f
-}
-
-func (f *FileStream) Download(fn StreamFunc) error {
-	res, err := f.client.Do(f.request)
+	res, err := f.client.Do(req)
 	if err != nil {
-		return err
+		return nil, err
 	}
 
 	err = f.copy(res, fn)
 	if err != nil {
-		return err
+		return nil, err
 	}
 
 	fn(FileInfo{
 		Complete: true,
 	})
 
-	return nil
+	return res, nil
 }
 
 func (f *FileStream) SetHeader(key, value string) {
-	f.request.Header.Set(key, value)
+	f.headers.Set(key, value)
+}
+
+func (f *FileStream) stat(name string) (os.FileInfo, error) {
+	return os.Stat(name)
+}
+
+func (f *FileStream) filepath(url *url.URL) (string, error) {
+	if !strings.Contains(url.Path, "/") {
+		return "", errors.New("Can't find filename from url path")
+	}
+
+	filename := filepath.Base(url.Path)
+
+	stat, err := f.stat(f.path)
+	if err != nil || !stat.IsDir() {
+		return "", errors.New("Incorrect file path")
+	}
+
+	return filepath.Join(f.path, filename), nil
 }
 
 func (f *FileStream) copy(res *Response, fn StreamFunc) error {
-	file, err := os.OpenFile(f.Filename, os.O_WRONLY|os.O_CREATE, 0700)
+	url := res.URL()
+
+	path, err := f.filepath(url)
 	if err != nil {
-		return fmt.Errorf("Could not create file %s due to %s", f.Filename, err)
+		return err
+	}
+
+	file, err := os.OpenFile(path, os.O_WRONLY|os.O_CREATE, 0700)
+	if err != nil {
+		return fmt.Errorf("Could not create file %s due to %s", filepath.Base(path), err)
 	}
 
 	defer file.Close()
 
 	finfo := FileInfo{
-		Name:      f.Filename,
+		Name:      path,
 		TotalSize: res.ContentLength(),
 	}
 
@@ -79,8 +108,6 @@ func (f *FileStream) copy(res *Response, fn StreamFunc) error {
 
 	for {
 		n, err := src.Read(buff)
-
-		finfo.Size++
 
 		if err != nil {
 			if err != io.EOF {
@@ -92,7 +119,7 @@ func (f *FileStream) copy(res *Response, fn StreamFunc) error {
 		if n > 0 {
 			file.Write(buff[0:n])
 
-			finfo.Size++
+			finfo.WrittenBytes += int64(n)
 			fn(finfo)
 		}
 	}
