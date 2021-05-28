@@ -14,9 +14,9 @@ fs := simpleclient.NewFileStream("/home/examplepath")
 
 url := "http://ipv4.download.thinkbroadband.com/200MB.zip"
 
-err := fs.Download(url, func(fileinfo simpleclient.FileInfo) error {
-  if fileinfo.Size > 0 {
-		log.Printf("Written: %v bytes", fileinfo.Size)
+_, err := fs.Download(url, func(fileinfo simpleclient.FileInfo) error {
+  if fileinfo.WrittenBytes > 0 {
+		log.Printf("Written: %v bytes", fileinfo.WrittenBytes)
 	}
 
 	if fileinfo.Complete {
