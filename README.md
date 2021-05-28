@@ -10,11 +10,11 @@ go get github.com/rlaskowski/simpleclient
 This example show how to download file from url
 
 ```go
-fs := client.NewFileStream("/home/examplepath")
+fs := simpleclient.NewFileStream("/home/examplepath")
 
 url := "http://ipv4.download.thinkbroadband.com/200MB.zip"
 
-err := fs.Download(url, func(fileinfo client.FileInfo) error {
+err := fs.Download(url, func(fileinfo simpleclient.FileInfo) error {
   if fileinfo.Size > 0 {
 		log.Printf("Written: %v bytes", fileinfo.Size)
 	}
