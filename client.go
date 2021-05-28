@@ -16,10 +16,10 @@ func NewClient() *Client {
 }
 
 func (c *Client) GetRequest(url string) (*http.Request, error) {
-	return c.NewRequest(http.MethodGet, url)
+	return c.newRequest(http.MethodGet, url)
 }
 
-func (c *Client) NewRequest(method, url string) (*http.Request, error) {
+func (c *Client) newRequest(method, url string) (*http.Request, error) {
 	req, err := http.NewRequest(method, url, nil)
 	if err != nil {
 		return nil, err
