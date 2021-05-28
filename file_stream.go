@@ -1,4 +1,4 @@
-package client
+package simpleclient
 
 import (
 	"errors"
@@ -15,6 +15,7 @@ type StreamFunc func(fileinfo FileInfo) error
 
 type FileInfo struct {
 	Name         string
+	Checksum     string
 	TotalSize    int64
 	WrittenBytes int64
 	Complete     bool
@@ -52,8 +53,11 @@ func (f *FileStream) Download(url string, fn StreamFunc) (*Response, error) {
 		return nil, err
 	}
 
+	checksum := f.checksum(res.response.Request.URL)
+
 	fn(FileInfo{
 		Complete: true,
+		Checksum: checksum,
 	})
 
 	return res, nil
@@ -80,6 +84,10 @@ func (f *FileStream) filepath(url *url.URL) (string, error) {
 	}
 
 	return filepath.Join(f.path, filename), nil
+}
+
+func (f *FileStream) checksum(url *url.URL) string {
+	return url.Query().Get("checksum")
 }
 
 func (f *FileStream) copy(res *Response, fn StreamFunc) error {
