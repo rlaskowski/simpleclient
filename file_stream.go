@@ -24,29 +24,31 @@ type FileInfo struct {
 type FileStream struct {
 	path    string
 	headers http.Header
-	client  *Client
+	Client  *Client
 }
 
 func NewFileStream(path string) *FileStream {
 	return &FileStream{
 		path:    path,
 		headers: make(http.Header),
-		client:  NewClient(),
+		Client:  NewClient(),
 	}
 }
 
 func (f *FileStream) Download(url string, fn StreamFunc) (*Response, error) {
-	req, err := f.client.GetRequest(url)
+	req, err := f.Client.GetRequest(url)
 	if err != nil {
 		return nil, err
 	}
 
 	req.Header = f.headers
 
-	res, err := f.client.Do(req)
+	res, err := f.Client.Do(req)
 	if err != nil {
 		return nil, err
 	}
+
+	defer res.response.Body.Close()
 
 	err = f.copy(res, fn)
 	if err != nil {
@@ -71,7 +73,9 @@ func (f *FileStream) stat(name string) (os.FileInfo, error) {
 	return os.Stat(name)
 }
 
-func (f *FileStream) filepath(url *url.URL) (string, error) {
+func (f *FileStream) filepath(res *Response) (string, error) {
+	url := res.URL()
+
 	if !strings.Contains(url.Path, "/") {
 		return "", errors.New("Can't find filename from url path")
 	}
@@ -80,7 +84,7 @@ func (f *FileStream) filepath(url *url.URL) (string, error) {
 
 	stat, err := f.stat(f.path)
 	if err != nil || !stat.IsDir() {
-		return "", errors.New("Incorrect file path")
+		return "", errors.New("Incorrect path to store file")
 	}
 
 	return filepath.Join(f.path, filename), nil
@@ -91,9 +95,7 @@ func (f *FileStream) checksum(url *url.URL) string {
 }
 
 func (f *FileStream) copy(res *Response, fn StreamFunc) error {
-	url := res.URL()
-
-	path, err := f.filepath(url)
+	path, err := f.filepath(res)
 	if err != nil {
 		return err
 	}
@@ -133,4 +135,16 @@ func (f *FileStream) copy(res *Response, fn StreamFunc) error {
 	}
 
 	return nil
+}
+
+func (fi FileInfo) Progress() float64 {
+	if !(fi.TotalSize > 0) {
+		return 0
+	}
+
+	return float64(fi.WrittenBytes) / float64(fi.TotalSize)
+}
+
+func (fi FileInfo) ProgressInPercent() float64 {
+	return fi.Progress() * 100
 }

@@ -15,6 +15,10 @@ func NewClient() *Client {
 	}
 }
 
+func (c *Client) Transport(transport *http.Transport) {
+	c.client.Transport = transport
+}
+
 func (c *Client) GetRequest(url string) (*http.Request, error) {
 	return c.newRequest(http.MethodGet, url)
 }
