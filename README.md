@@ -16,7 +16,7 @@ url := "http://ipv4.download.thinkbroadband.com/200MB.zip"
 
 _, err := fs.Download(url, func(fileinfo simpleclient.FileInfo) error {
   if fileinfo.WrittenBytes > 0 {
-		log.Printf("Written: %v bytes", fileinfo.WrittenBytes)
+		log.Printf("Written: %.2f percent", fileinfo.ProgressInPercent())
 	}
 
 	if fileinfo.Complete {
