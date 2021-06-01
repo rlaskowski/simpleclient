@@ -145,6 +145,6 @@ func (fi FileInfo) Progress() float64 {
 	return float64(fi.WrittenBytes) / float64(fi.TotalSize)
 }
 
-func (fi FileInfo) ProgressInPercent() string {
-	return fmt.Sprintf("%.2f", fi.Progress()*100)
+func (fi FileInfo) ProgressInPercent() float64 {
+	return fi.Progress() * 100
 }
