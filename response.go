@@ -7,8 +7,7 @@ import (
 )
 
 type Response struct {
-	response   *http.Response
-	SendedByte int64
+	response *http.Response
 }
 
 func NewResponse(res *http.Response) *Response {
