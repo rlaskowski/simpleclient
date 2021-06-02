@@ -119,18 +119,18 @@ func (f *FileStream) copy(res *Response, fn StreamFunc) error {
 	for {
 		n, err := src.Read(buff)
 
-		if err != nil {
-			if err != io.EOF {
-				return err
-			}
-			break
-		}
-
 		if n > 0 {
 			file.Write(buff[0:n])
 
 			sinfo.WrittenBytes += int64(n)
 			fn(sinfo)
+		}
+
+		if err != nil {
+			if err != io.EOF {
+				return err
+			}
+			break
 		}
 	}
 
