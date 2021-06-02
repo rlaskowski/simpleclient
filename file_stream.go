@@ -5,26 +5,29 @@ import (
 	"fmt"
 	"io"
 	"net/http"
-	"net/url"
 	"os"
 	"path/filepath"
 	"strings"
 )
 
-type StreamFunc func(fileinfo FileInfo) error
+const (
+	defaultWriteBuffer int = 32 * 1024
+)
 
-type FileInfo struct {
+type StreamFunc func(fileinfo StreamInfo) error
+
+type StreamInfo struct {
 	Name         string
-	Checksum     string
 	TotalSize    int64
 	WrittenBytes int64
 	Complete     bool
 }
 
 type FileStream struct {
-	path    string
-	headers http.Header
-	Client  *Client
+	path        string
+	headers     http.Header
+	writeBuffer int
+	Client      *Client
 }
 
 func NewFileStream(path string) *FileStream {
@@ -55,14 +58,11 @@ func (f *FileStream) Download(url string, fn StreamFunc) (*Response, error) {
 		return nil, err
 	}
 
-	checksum := f.checksum(res.response.Request.URL)
-
-	fn(FileInfo{
-		Complete: true,
-		Checksum: checksum,
-	})
-
 	return res, nil
+}
+
+func (f *FileStream) WriteBuffer(buff int) {
+	f.writeBuffer = buff
 }
 
 func (f *FileStream) SetHeader(key, value string) {
@@ -90,10 +90,6 @@ func (f *FileStream) filepath(res *Response) (string, error) {
 	return filepath.Join(f.path, filename), nil
 }
 
-func (f *FileStream) checksum(url *url.URL) string {
-	return url.Query().Get("checksum")
-}
-
 func (f *FileStream) copy(res *Response, fn StreamFunc) error {
 	path, err := f.filepath(res)
 	if err != nil {
@@ -107,14 +103,18 @@ func (f *FileStream) copy(res *Response, fn StreamFunc) error {
 
 	defer file.Close()
 
-	finfo := FileInfo{
+	sinfo := StreamInfo{
 		Name:      path,
 		TotalSize: res.ContentLength(),
 	}
 
 	src := res.Body()
 
-	buff := make([]byte, 32*1024)
+	if !(f.writeBuffer > 0) {
+		f.WriteBuffer(defaultWriteBuffer)
+	}
+
+	buff := make([]byte, f.writeBuffer)
 
 	for {
 		n, err := src.Read(buff)
@@ -129,15 +129,17 @@ func (f *FileStream) copy(res *Response, fn StreamFunc) error {
 		if n > 0 {
 			file.Write(buff[0:n])
 
-			finfo.WrittenBytes += int64(n)
-			fn(finfo)
+			sinfo.WrittenBytes += int64(n)
+			fn(sinfo)
 		}
 	}
 
-	return nil
+	sinfo.Complete = true
+
+	return fn(sinfo)
 }
 
-func (fi FileInfo) Progress() float64 {
+func (fi StreamInfo) Progress() float64 {
 	if !(fi.TotalSize > 0) {
 		return 0
 	}
@@ -145,6 +147,6 @@ func (fi FileInfo) Progress() float64 {
 	return float64(fi.WrittenBytes) / float64(fi.TotalSize)
 }
 
-func (fi FileInfo) ProgressInPercent() float64 {
+func (fi StreamInfo) ProgressInPercent() float64 {
 	return fi.Progress() * 100
 }
