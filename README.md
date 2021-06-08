@@ -1,5 +1,7 @@
 # simpleclient
 
+Simple http client to help downloading resources
+
 ### Install
 ```
 go get github.com/rlaskowski/simpleclient
