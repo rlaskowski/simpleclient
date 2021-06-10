@@ -14,7 +14,7 @@ const (
 	defaultWriteBuffer int = 32 * 1024
 )
 
-type StreamFunc func(fileinfo StreamInfo) error
+type StreamFunc func(streaminfo StreamInfo) error
 
 type StreamInfo struct {
 	Name         string
@@ -139,7 +139,7 @@ func (f *FileStream) copy(res *Response, fn StreamFunc) error {
 	return fn(sinfo)
 }
 
-func (fi StreamInfo) Progress() float64 {
+func (s StreamInfo) Progress() float64 {
 	if !(fi.TotalSize > 0) {
 		return 0
 	}
@@ -147,6 +147,6 @@ func (fi StreamInfo) Progress() float64 {
 	return float64(fi.WrittenBytes) / float64(fi.TotalSize)
 }
 
-func (fi StreamInfo) ProgressInPercent() float64 {
+func (s StreamInfo) ProgressInPercent() float64 {
 	return fi.Progress() * 100
 }
